@@ -1,5 +1,7 @@
 # siren-scala-shapeless
 
+[![Build Status](https://travis-ci.org/mbilski/siren-scala-shapeless.svg)](https://travis-ci.org/mbilski/siren-scala-shapeless)
+
 Automatic [siren](https://github.com/yetu/siren-scala) encoder derivation with [shapeless](https://github.com/milessabin/shapeless)
 
 ## Usage
