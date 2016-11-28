@@ -18,7 +18,13 @@ package object generic {
   }
 
   implicit val stringEncoder: ValueEncoder[String] = encoder(s => Property.StringValue(s))
+  implicit val charEncoder: ValueEncoder[Char] = encoder(s => Property.StringValue(s.toString))
   implicit val intEncoder: ValueEncoder[Int] = encoder(s => Property.NumberValue(s))
+  implicit val longEncoder: ValueEncoder[Long] = encoder(s => Property.NumberValue(s))
+  implicit val doubleEncoder: ValueEncoder[Double] = encoder(s => Property.NumberValue(s))
+  implicit val floatEncoder: ValueEncoder[Float] = encoder(s => Property.NumberValue(s))
+  implicit val booleanEncoder: ValueEncoder[Boolean] = encoder(s => Property.BooleanValue(s))
+  implicit val bigDecimalEncoder: ValueEncoder[BigDecimal] = encoder(s => Property.NumberValue(s))
 
   implicit def listEncoder[A](implicit enc: ValueEncoder[A]): ValueEncoder[List[A]] =
     encoder(ls => Property.JsArrayValue(ls.map(enc.encode)))
@@ -60,7 +66,7 @@ package object generic {
     def asProps: Properties = v match {
       case js: Property.JsObjectValue =>
         js.value.toList.map(v => Property(v._1, v._2))
-      case _ => sys.error("Value is not a JsObject")
+      case v => sys.error(s"Value $v is not a JsObject")
     }
   }
 }

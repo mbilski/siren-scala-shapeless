@@ -5,10 +5,10 @@ import com.yetu.siren.model._
 import pl.immutables.siren.generic._
 
 class SirenScalaShapelessSpec extends mutable.Specification {
-  case class Foo(name: String, ints: List[Int])
+  case class Foo(name: String, ints: List[BigDecimal])
   case class Bar(id: Option[String], foo: Foo)
 
-  val foo = Foo("foo", List(1, 2, 3))
+  val foo = Foo("foo", List(123.0, 643.0))
   val bar = Bar(Some("bar"), foo)
 
   "ValueEncoder must" >> {
