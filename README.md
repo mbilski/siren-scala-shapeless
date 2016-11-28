@@ -10,7 +10,7 @@ Add to your `build.sbt`
 ```scala
 resolvers += "siren-scala-shapeless" at "http://dl.bintray.com/mbilski/maven/"
 
-libraryDependencies += "pl.immutables" %% "siren-scala-shapeless" % "0.0.1"
+libraryDependencies += "pl.immutables" %% "siren-scala-shapeless" % "0.0.3"
 ```
 
 ### Automatic encoder derivation
