@@ -1,6 +1,7 @@
 # siren-scala-shapeless
 
 [![Build Status](https://travis-ci.org/mbilski/siren-scala-shapeless.svg)](https://travis-ci.org/mbilski/siren-scala-shapeless)
+[![Download](https://api.bintray.com/packages/mbilski/maven/siren-scala-shapeless/images/download.svg)](https://bintray.com/mbilski/maven/siren-scala-shapeless/_latestVersion)
 
 Automatic [siren](https://github.com/yetu/siren-scala) encoder derivation with [shapeless](https://github.com/milessabin/shapeless)
 
