@@ -4,7 +4,7 @@ import shapeless._
 import shapeless.labelled._
 import com.yetu.siren.model._
 
-package object generic {
+package object encoder {
   trait ValueEncoder[A] {
     def encode(value: A): Property.Value
   }
