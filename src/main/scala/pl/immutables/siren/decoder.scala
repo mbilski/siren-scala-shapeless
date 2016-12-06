@@ -5,40 +5,84 @@ import shapeless.labelled._
 import com.yetu.siren.model._
 
 package object decoder {
+  sealed abstract class DecoderFailure(val message: String)
+
+  final object DecoderFailure {
+    def apply(message: String): DecoderFailure = new DecoderFailure(message) {}
+
+    def invalidType(clazz: String, value: Property.Value) =
+      DecoderFailure(s"$value's type is not $clazz")
+
+    def missingField(field: String, value: Property.JsObjectValue) =
+      DecoderFailure(s"$field is missing in $value")
+  }
+
   trait ValueDecoder[A] {
-    def decode(value: Property.Value): Option[A]
+    def decode(value: Property.Value): Either[DecoderFailure, A]
   }
 
   object ValueDecoder {
     def apply[A](implicit dcr: ValueDecoder[A]): ValueDecoder[A] = dcr
   }
 
-  def decoder[A](f: Property.Value => Option[A]): ValueDecoder[A] = new ValueDecoder[A] {
-    def decode(value: Property.Value): Option[A] = f(value)
+  def decoder[A](f: Property.Value => Either[DecoderFailure, A]): ValueDecoder[A] = new ValueDecoder[A] {
+    def decode(value: Property.Value): Either[DecoderFailure, A] = f(value)
   }
 
   implicit val stringDecoder: ValueDecoder[String] = decoder {
-    case Property.StringValue(s) => Some(s)
-    case _ => None
+    case Property.StringValue(s) => Right(s)
+    case prop => Left(DecoderFailure.invalidType("String", prop))
   }
 
   implicit val intDecoder: ValueDecoder[Int] = decoder {
-    case Property.NumberValue(n) => Some(n.toInt)
-    case _ => None
+    case Property.NumberValue(n) => Right(n.toInt)
+    case prop => Left(DecoderFailure.invalidType("Int", prop))
+  }
+
+  implicit val longDecoder: ValueDecoder[Long] = decoder {
+    case Property.NumberValue(n) => Right(n.toLong)
+    case prop => Left(DecoderFailure.invalidType("Long", prop))
+  }
+
+  implicit val charDecoder: ValueDecoder[Char] = decoder {
+    case Property.StringValue(n) if !n.isEmpty => Right(n.charAt(0))
+    case prop => Left(DecoderFailure.invalidType("Char", prop))
+  }
+
+  implicit val doubleDecoder: ValueDecoder[Double] = decoder {
+    case Property.NumberValue(n) => Right(n.toDouble)
+    case prop => Left(DecoderFailure.invalidType("Double", prop))
+  }
+
+  implicit val floatDecoder: ValueDecoder[Float] = decoder {
+    case Property.NumberValue(n) => Right(n.toFloat)
+    case prop => Left(DecoderFailure.invalidType("Float", prop))
+  }
+
+  implicit val booleanDecoder: ValueDecoder[Boolean] = decoder {
+    case Property.BooleanValue(b) => Right(b)
+    case prop => Left(DecoderFailure.invalidType("Boolean", prop))
+  }
+
+  implicit val bigDecimalDecoder: ValueDecoder[BigDecimal] = decoder {
+    case Property.NumberValue(n) => Right(n)
+    case prop => Left(DecoderFailure.invalidType("BigDecimal", prop))
   }
 
   implicit def listDecoder[A](implicit dcr: ValueDecoder[A]): ValueDecoder[List[A]] = decoder {
     case Property.JsArrayValue(ls) =>
-      val ols = ls.map(dcr.decode).toList
-      if (ols contains None) None else Some(ols.map(_.get))
-    case _ => None
+      ls.map(dcr.decode).toList.partition(_.isLeft) match {
+        case (Nil, vs) => Right(for(Right(i) <- vs) yield i)
+        case (errors, _) => Left(errors.head.left.get)
+      }
+    case prop => Left(DecoderFailure.invalidType("List", prop))
   }
 
   implicit def optionDecoder[A](implicit dcr: ValueDecoder[A]): ValueDecoder[Option[A]] = decoder {
-    v => dcr.decode(v).map(Some(_))
+    v => dcr.decode(v).right.map(Some(_))
   }
 
-  implicit val hNilValueDecoder: ValueDecoder[HNil] = decoder(hnil => Some(HNil))
+  implicit val hNilValueDecoder: ValueDecoder[HNil] = decoder(hnil => Right(HNil))
 
   implicit def hListValueDecoder[K <: Symbol, H, T <: HList](implicit
     witness: Witness.Aux[K],
@@ -47,14 +91,14 @@ package object decoder {
   ): ValueDecoder[FieldType[K, H] :: T] = {
     val name = witness.value.name
     decoder {
-      case Property.JsObjectValue(vs) =>
+      case prop @ Property.JsObjectValue(vs) =>
         for {
-          v <- vs.find(_._1 == name)
-          h <- hDecoder.value.decode(v._2)
-          obj = Property.JsObjectValue(vs.filter(_ != v))
-          t <- tDecoder.decode(obj)
+          v <- vs.find(_._1 == name).toRight(DecoderFailure.missingField(name, prop)).right
+          h <- hDecoder.value.decode(v._2).right
+          o <- Right(Property.JsObjectValue(vs.filter(_ != v))).right
+          t <- tDecoder.decode(o).right
         } yield field[K](h) :: t
-      case _ => None
+      case prop => Left(DecoderFailure.invalidType("Object", prop))
     }
   }
 
@@ -64,8 +108,8 @@ package object decoder {
   ): ValueDecoder[A] = decoder {
     case js: Property.JsObjectValue =>
       for {
-        hlist <- hDecoder.value.decode(js)
+        hlist <- hDecoder.value.decode(js).right
       } yield generic.from(hlist)
-    case _ => None
+    case prop => Left(DecoderFailure.invalidType("Object", prop))
   }
 }
