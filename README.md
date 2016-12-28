@@ -12,25 +12,26 @@ Add to your `build.sbt`
 ```scala
 resolvers += "siren-scala-shapeless" at "http://dl.bintray.com/mbilski/maven/"
 
-libraryDependencies += "pl.immutables" %% "siren-scala-shapeless" % "1.0.0"
+libraryDependencies += "pl.immutables" %% "siren-scala-shapeless" % "1.0.1"
 ```
 
-### Automatic encoder and decoder derivation
+### Automatic encoder and decoder derivation for products and coproducts
 
 ```scala
 import pl.immutables.siren.encoder._
 import pl.immutables.siren.decoder._
 
-case class Foo(name: String, ints: List[Int])
-case class Bar(id: Option[String], foo: Foo)
+sealed trait Sample
+case class Foo(name: String, ints: List[Int]) extends Sample
+case class Bar(id: Option[String], foo: Foo) extends Sample
 
 val foo = Foo("foo", List(1, 2, 3))
 val bar = Bar(Some("bar"), foo)
 
-val encoded = ValueEncoder[Bar].encode(bar).asProps
-> Properties = List(Property(id,StringValue(bar)), Property(foo,JsObjectValue(List((name,StringValue(foo)), (ints,JsArrayValue(List(NumberValue(1), NumberValue(2), NumberValue(3))))))))
+val encoded = ValueEncoder[Sample].encode(bar).asProps
+> Properties = List(Property(__$$$__,StringValue(Bar)), Property(id,StringValue(bar)), Property(foo,JsObjectValue(List((name,StringValue(foo)), (ints,JsArrayValue(List(NumberValue(1), NumberValue(2), NumberValue(3))))))))
 
-val decoded = ValueDecoder[Bar].decode(encoded.asJsObject)
+val decoded = ValueDecoder[Sample].decode(encoded.asJsObject)
 > Either[DecoderFailure,Bar] = Right(Bar(Some(bar),Foo(foo,List(1, 2, 3))))
 ```
 

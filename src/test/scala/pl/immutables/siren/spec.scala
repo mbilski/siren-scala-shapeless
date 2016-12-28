@@ -2,6 +2,7 @@ package pl.immutables.siren
 
 import org.specs2._
 import com.yetu.siren.model._
+import pl.immutables.siren._
 import pl.immutables.siren.encoder._
 import pl.immutables.siren.decoder._
 
@@ -12,8 +13,15 @@ class SirenScalaShapelessSpec extends mutable.Specification {
   val foo = Foo("foo", List(123, 643))
   val bar = Bar(Some("bar"), foo)
 
+  sealed trait Kind
+  case class KindA(a: String) extends Kind
+  case class KindB(b: Int) extends Kind
+
+  val ka: Kind = KindA("a")
+  val kb: Kind = KindB(2)
+
   "ValueEncoder must" >> {
-    "encode classes as siren properties" >> {
+    "encode products" >> {
       val props = ValueEncoder[Bar].encode(bar).asProps
       val numbersProps = foo.ints.map(v => Property.NumberValue(v))
       val fooProps = Seq(
@@ -23,13 +31,31 @@ class SirenScalaShapelessSpec extends mutable.Specification {
       props.head === Property("id", Property.StringValue("bar"))
       props.tail.head === Property("foo", Property.JsObjectValue(fooProps))
     }
+
+    "encode coproducts" >> {
+      val enc = ValueEncoder[Kind]
+      val pa = enc.encode(ka).asProps
+      val pb = enc.encode(kb).asProps
+      pa.head === Property(discriminator, Property.StringValue("KindA"))
+      pb.head === Property(discriminator, Property.StringValue("KindB"))
+      pa.tail.head === Property("a", Property.StringValue("a"))
+      pb.tail.head === Property("b", Property.NumberValue(2))
+    }
   }
 
   "ValueDecoder must" >> {
-    "decode siren properties to classes" >> {
+    "decode products" >> {
       val props = ValueEncoder[Bar].encode(bar)
       val decoded = ValueDecoder[Bar].decode(props)
       decoded === Right(bar)
+    }
+
+    "decode coproducts" >> {
+      val (enc, dcr) = (ValueEncoder[Kind], ValueDecoder[Kind])
+      val (pa, pb) = (enc.encode(ka), enc.encode(kb))
+      val (da, db) = (dcr.decode(pa), dcr.decode(pb))
+      da === Right(ka)
+      db === Right(kb)
     }
 
     "decode optional values" >> {

@@ -95,6 +95,10 @@ package object decoder {
   }
 
   implicit val hNilValueDecoder: ValueDecoder[HNil] = decoder(hnil => Right(HNil))
+  
+  implicit val cNilValueDecoder: ValueDecoder[CNil] = decoder(cnil =>
+    Left(DecoderFailure("Coproduct value not found"))
+  )
 
   implicit def hListValueDecoder[K <: Symbol, H, T <: HList](implicit
     witness: Witness.Aux[K],
@@ -114,7 +118,25 @@ package object decoder {
     }
   }
 
-  implicit def genericValueDecoder[A, H <: HList](implicit
+  implicit def coproductDecoder[K <: Symbol, H, T <: Coproduct](implicit
+    witness: Witness.Aux[K],
+    hDecoder: Lazy[ValueDecoder[H]],
+    tDecoder: ValueDecoder[T]
+  ): ValueDecoder[FieldType[K, H] :+: T] = {
+    val key = (discriminator, Property.StringValue(witness.value.name))
+    decoder {
+      case prop @ Property.JsObjectValue(vs) =>
+        vs.find(_ == key) match {
+          case Some(v) => hDecoder.value.decode(prop)
+              .right.map(h => Inl(field[K](h)))
+          case None => tDecoder.decode(prop)
+              .right.map(t => Inr(t))
+        }
+      case prop => Left(DecoderFailure.invalidType("Coproduct", prop))
+    }
+  }
+
+  implicit def genericValueDecoder[A, H](implicit
     generic: LabelledGeneric.Aux[A, H],
     hDecoder: Lazy[ValueDecoder[H]]
   ): ValueDecoder[A] = decoder {

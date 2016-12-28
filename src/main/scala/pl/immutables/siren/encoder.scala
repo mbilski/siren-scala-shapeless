@@ -9,7 +9,7 @@ package object encoder {
     def encode(value: A): Property.Value
   }
 
-  object ValueEncoder {
+  object ValueEncoder extends default {
     def apply[A](implicit enc: ValueEncoder[A]): ValueEncoder[A] = enc
   }
 
@@ -43,7 +43,9 @@ package object encoder {
     def encode(value: A): Property.JsObjectValue = f(value)
   }
 
-  implicit val hNilOJsbjectEncoder: JsObjectEncoder[HNil] = objectEncoder(hnil => Property.JsObjectValue(Nil))
+  implicit val hNilJsObjectEncoder: JsObjectEncoder[HNil] = objectEncoder(hnil => Property.JsObjectValue(Nil))
+
+  implicit val cNilJsObjectEncoder: JsObjectEncoder[CNil] = objectEncoder(cnil => ???)
 
   implicit def hListJsObjectEncoder[K <: Symbol, H, T <: HList](implicit
     witness: Witness.Aux[K],
@@ -58,11 +60,26 @@ package object encoder {
     }
   }
 
-  implicit def genericJsObjectEncoder[A, H <: HList](implicit
-    generic: LabelledGeneric.Aux[A, H],
-    hEncoder: Lazy[JsObjectEncoder[H]]
-  ): JsObjectEncoder[A] = objectEncoder { value =>
-    hEncoder.value.encode(generic.to(value))
+  implicit def coproductEncoder[K <: Symbol, H, T <: Coproduct](implicit
+    witness: Witness.Aux[K],
+    hEncoder: Lazy[JsObjectEncoder[H]],
+    tEncoder: JsObjectEncoder[T]
+  ): JsObjectEncoder[FieldType[K, H] :+: T] = objectEncoder {
+    case Inl(h) =>
+      val obj = hEncoder.value.encode(h)
+      val prop = Property.StringValue(witness.value.name)
+      Property.JsObjectValue((discriminator, prop) +: obj.value)
+    case Inr(t) =>
+      tEncoder.encode(t)
+  }
+
+  trait default {
+    implicit def genericJsObjectEncoder[A, H](implicit
+        generic: LabelledGeneric.Aux[A, H],
+        hEncoder: Lazy[JsObjectEncoder[H]]
+    ): JsObjectEncoder[A] = objectEncoder { value =>
+        hEncoder.value.encode(generic.to(value))
+    }
   }
 
   implicit class ValueProp(v: Property.Value) {
