@@ -95,7 +95,7 @@ package object decoder {
   }
 
   implicit val hNilValueDecoder: ValueDecoder[HNil] = decoder(hnil => Right(HNil))
-  
+
   implicit val cNilValueDecoder: ValueDecoder[CNil] = decoder(cnil =>
     Left(DecoderFailure("Coproduct value not found"))
   )
