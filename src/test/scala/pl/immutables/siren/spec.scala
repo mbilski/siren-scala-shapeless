@@ -6,6 +6,8 @@ import pl.immutables.siren._
 import pl.immutables.siren.encoder._
 import pl.immutables.siren.decoder._
 
+import java.time._
+
 class SirenScalaShapelessSpec extends mutable.Specification {
   case class Foo(name: String, ints: Seq[Int])
   case class Bar(id: Option[String], foo: Foo)
