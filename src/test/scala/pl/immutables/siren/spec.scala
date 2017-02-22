@@ -9,10 +9,10 @@ import pl.immutables.siren.decoder._
 import java.time._
 
 class SirenScalaShapelessSpec extends mutable.Specification {
-  case class Foo(name: String, ints: Seq[Int], date: Option[LocalDate])
+  case class Foo(name: String, ints: Seq[Int])
   case class Bar(id: Option[String], foo: Foo)
 
-  val foo = Foo("foo", List(123, 643), Some(LocalDate.now()))
+  val foo = Foo("foo", List(123, 643))
   val bar = Bar(Some("bar"), foo)
 
   sealed trait Kind
